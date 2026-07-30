@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Cretaceous Field Trip</title>
+<style>
+  :root{
+    --ink:#241c14;
+    --parchment:#e8dcc0;
+    --ember:#ff6b35;
+    --moss:#2f5d4a;
+    --dusk:#2b2138;
+    --haze:#c98a5a;
+  }
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;padding:0;height:100%;width:100%;
+    overflow:hidden;background:#12100f;
+    -webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:none;overscroll-behavior:none;
+  }
+  #scene{position:fixed;inset:0}
+  canvas{display:block}
+
+  /* ---------- gate ---------- */
+  #gate{
+    position:fixed;inset:0;z-index:40;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:max(22px,env(safe-area-inset-top)) 26px max(22px,env(safe-area-inset-bottom));
+    background:
+      radial-gradient(120% 80% at 50% 120%, rgba(255,107,53,.35), transparent 60%),
+      linear-gradient(#191320 0%, #2b2138 45%, #5b3a2e 100%);
+    color:var(--parchment);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    overflow-y:auto;
+  }
+  #gate .eyebrow{
+    font-family:ui-monospace,"SFMono-Regular",Menlo,monospace;
+    font-size:10.5px;letter-spacing:.34em;text-transform:uppercase;
+    color:#e6b98a;margin:0 0 14px;
+  }
+  #gate h1{
+    margin:0;font-weight:400;font-size:clamp(34px,11vw,58px);
+    line-height:.94;letter-spacing:-.015em;
+  }
+  #gate h1 em{
+    display:block;font-style:italic;color:var(--ember);
+    font-size:.52em;letter-spacing:.01em;margin-top:.35em;
+  }
+  #gate p{
+    margin:18px 0 0;max-width:34em;
+    font-size:15.5px;line-height:1.55;color:#dfcfae;
+  }
+  #steps{
+    margin:20px 0 0;padding:0;list-style:none;max-width:34em;
+    border-top:1px solid rgba(232,220,192,.22);
+  }
+  #steps li{
+    display:flex;gap:12px;align-items:baseline;
+    padding:9px 0;border-bottom:1px solid rgba(232,220,192,.14);
+    font-size:14px;line-height:1.4;color:#d9c8a6;
+  }
+  #steps b{
+    font-family:ui-monospace,Menlo,monospace;font-size:10px;font-weight:400;
+    letter-spacing:.12em;color:var(--ember);flex:0 0 auto;padding-top:2px;
+  }
+  #go{
+    margin-top:24px;align-self:flex-start;
+    -webkit-appearance:none;appearance:none;border:0;cursor:pointer;
+    background:var(--parchment);color:var(--ink);
+    font-family:inherit;font-size:19px;letter-spacing:.01em;
+    padding:15px 30px;border-radius:2px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  #go:active{transform:translateY(1px)}
+  #go:focus-visible{outline:3px solid var(--ember);outline-offset:3px}
+  #opts{
+    margin-top:16px;display:flex;gap:18px;flex-wrap:wrap;
+    font-size:13px;color:#c9b795;
+  }
+  #opts label{display:flex;gap:7px;align-items:center}
+  #opts input{width:17px;height:17px;accent-color:var(--ember)}
+  #fine{margin-top:22px;font-size:11.5px;color:#a89273;max-width:34em;line-height:1.5}
+
+  /* ---------- in-scene chrome ---------- */
+  #bar{
+    position:fixed;z-index:30;left:50%;transform:translateX(-50%);
+    bottom:max(9px,env(safe-area-inset-bottom));
+    display:none;gap:8px;
+    transition:opacity .5s;opacity:1;
+  }
+  #bar.dim{opacity:.12}
+  #bar button{
+    -webkit-appearance:none;appearance:none;cursor:pointer;
+    background:rgba(20,16,14,.62);color:#e8dcc0;
+    border:1px solid rgba(232,220,192,.3);border-radius:99px;
+    font-family:ui-monospace,Menlo,monospace;
+    font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+    padding:9px 13px;
+  }
+  #turn{
+    position:fixed;inset:0;z-index:35;display:none;
+    align-items:center;justify-content:center;text-align:center;
+    background:#12100f;color:#e8dcc0;padding:30px;
+    font-family:"Iowan Old Style",Georgia,serif;font-size:21px;line-height:1.4;
+  }
+  #turn span{display:block;font-size:44px;margin-bottom:14px}
+  @media (prefers-reduced-motion:reduce){#bar{transition:none}}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+
+<div id="turn"><div><span>&#8635;</span>Turn your phone sideways,<br>then slide it into the headset.</div></div>
+
+<div id="bar">
+  <button id="b-split">Split view</button>
+  <button id="b-center">Recenter</button>
+  <button id="b-sound">Sound</button>
+</div>
+
+<div id="gate">
+  <p class="eyebrow">A gaze-controlled walk &middot; 68 million BC</p>
+  <h1>Cretaceous<em>Field Trip</em></h1>
+  <p>Five animals are out in the valley. Walk the trail, hold your gaze on one, and it goes in your field journal. No buttons, no controller &mdash; your head does everything.</p>
+  <ul id="steps">
+    <li><b>LOOK</b><span>Glowing rings on the ground are trail stops. Rest the dot on one and you glide over.</span></li>
+    <li><b>HOLD</b><span>Rest the dot on an animal for about a second to log it. The card tells you what you found.</span></li>
+    <li><b>FIND</b><span>All five are loggable from the trail. Some of them notice you first.</span></li>
+  </ul>
+  <button id="go">Start the walk</button>
+  <div id="opts">
+    <label><input type="checkbox" id="o-split" checked> Two-eye view for headset</label>
+    <label><input type="checkbox" id="o-sound" checked> Sound</label>
+  </div>
+  <p id="fine">Best in Safari on iPhone, held sideways. If head tracking doesn't take, drag a finger to look around and tap Recenter once the phone is in the headset.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.128.0/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ==========================================================
+   0. shorthands
+   ========================================================== */
+var W = window, D = document;
+var $ = function(id){ return D.getElementById(id); };
+var TAU = Math.PI * 2;
+var rand = function(a,b){ return a + Math.random()*(b-a); };
+var clamp = function(v,a,b){ return v<a?a:(v>b?b:v); };
+
+var PAL = {
+  sky:    0x2b2138,
+  horizon:0xd8703f,
+  haze:   0xc98a5a,
+  soil:   0x8d6a3f,
+  grass:  0xa8894e,
+  leaf:   0x2f5d4a,
+  leaf2:  0x47775a,
+  rock:   0x5d5348,
+  water:  0x24484a,
+  ember:  0xff6b35,
+  ink:    0x241c14,
+  paper:  0xe8dcc0
+};
+
+/* ==========================================================
+   1. renderer / scene / camera
+   ========================================================== */
+var renderer = new THREE.WebGLRenderer({ antialias:false, alpha:false, powerPreference:"high-performance" });
+renderer.setPixelRatio(Math.min(W.devicePixelRatio || 1, 1.75));
+renderer.setSize(W.innerWidth, W.innerHeight);
+$("scene").appendChild(renderer.domElement);
+
+var scene = new THREE.Scene();
+scene.fog = new THREE.Fog(PAL.haze, 34, 210);
+
+var camera = new THREE.PerspectiveCamera(72, W.innerWidth/W.innerHeight, 0.1, 800);
+camera.position.set(0, 1.65, 6);
+scene.add(camera);
+
+var stereo = new THREE.StereoCamera();
+stereo.aspect = 0.5;
+stereo.eyeSep = 0.064;
+var splitView = true;
+
+/* ---- light ---- */
+var hemi = new THREE.HemisphereLight(0xffb37a, 0x3a2a1a, 0.9);
+scene.add(hemi);
+var sun = new THREE.DirectionalLight(0xffd2a3, 0.75);
+sun.position.set(-40, 26, -70);
+scene.add(sun);
+
+/* ---- sky dome (canvas gradient, cheap) ---- */
+(function(){
+  var c = D.createElement("canvas"); c.width = 4; c.height = 256;
+  var g = c.getContext("2d");
+  var grad = g.createLinearGradient(0,0,0,256);
+  grad.addColorStop(0.00, "#1d1729");
+  grad.addColorStop(0.42, "#4b3350");
+  grad.addColorStop(0.72, "#b8613c");
+  grad.addColorStop(0.90, "#e08a4a");
+  grad.addColorStop(1.00, "#c98a5a");
+  g.fillStyle = grad; g.fillRect(0,0,4,256);
+  var tex = new THREE.CanvasTexture(c);
+  tex.magFilter = THREE.LinearFilter;
+  var dome = new THREE.Mesh(
+    new THREE.SphereGeometry(400, 24, 16),
+    new THREE.MeshBasicMaterial({ map:tex, side:THREE.BackSide, fog:false, depthWrite:false })
+  );
+  scene.add(dome);
+})();
+
+/* ==========================================================
+   2. material + geometry helpers
+   ========================================================== */
+var MAT = {};
+function mat(color, opts){
+  var key = color + "|" + JSON.stringify(opts||{});
+  if (!MAT[key]) {
+    var o = { color:color, flatShading:true };
+    if (opts) for (var k in opts) o[k] = opts[k];
+    MAT[key] = new THREE.MeshLambertMaterial(o);
+  }
+  return MAT[key];
+}
+var GEO = {
+  box: new THREE.BoxGeometry(1,1,1),
+  cyl: new THREE.CylinderGeometry(0.5,0.5,1,8),
+  cone: new THREE.ConeGeometry(0.5,1,7),
+  sph: new THREE.SphereGeometry(0.5,8,6),
+  ico: new THREE.IcosahedronGeometry(0.5,0)
+};
+function piece(geoName, color, sx,sy,sz, x,y,z){
+  var m = new THREE.Mesh(GEO[geoName], mat(color));
+  m.scale.set(sx,sy,sz);
+  m.position.set(x,y,z);
+  return m;
+}
+
+/* ==========================================================
+   3. terrain, plants, volcano, water
+   ========================================================== */
+var ground = new THREE.Mesh(new THREE.PlaneGeometry(600,600,1,1), mat(PAL.soil));
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+
+/* dry-grass patches so the ground isn't one flat colour */
+(function(){
+  var patch = new THREE.CircleGeometry(1, 7);
+  for (var i=0;i<90;i++){
+    var m = new THREE.Mesh(patch, mat(PAL.grass));
+    m.rotation.x = -Math.PI/2;
+    m.rotation.z = rand(0,TAU);
+    var s = rand(3,11);
+    m.scale.set(s, s*rand(.6,1.3), 1);
+    m.position.set(rand(-120,120), 0.02, rand(-140,60));
+    scene.add(m);
+  }
+})();
+
+/* pond + far river */
+function water(w,d,x,z){
+  var m = new THREE.Mesh(new THREE.CircleGeometry(1, 22), mat(PAL.water,{transparent:true,opacity:0.9}));
+  m.rotation.x = -Math.PI/2;
+  m.scale.set(w, d, 1);
+  m.position.set(x, 0.04, z);
+  scene.add(m);
+  return m;
+}
+water(17,13,-10,-40);
+var river = new THREE.Mesh(new THREE.PlaneGeometry(320,26), mat(PAL.water,{transparent:true,opacity:0.92}));
+river.rotation.x = -Math.PI/2; river.position.set(0,0.03,-96);
+scene.add(river);
+
+/* conifer / cycad / fern */
+function conifer(h){
+  var g = new THREE.Group();
+  g.add(piece("cyl", 0x4a3527, h*0.09, h*0.55, h*0.09, 0, h*0.27, 0));
+  for (var i=0;i<3;i++){
+    var t = i/2;
+    g.add(piece("cone", i%2 ? PAL.leaf : PAL.leaf2,
+      h*(0.52-0.15*t), h*(0.42-0.07*t), h*(0.52-0.15*t),
+      0, h*(0.5+0.24*i), 0));
+  }
+  return g;
+}
+function cycad(h){
+  var g = new THREE.Group();
+  g.add(piece("cyl", 0x5b4630, h*0.16, h*0.4, h*0.16, 0, h*0.2, 0));
+  for (var i=0;i<7;i++){
+    var a = i/7*TAU;
+    var f = piece("cone", PAL.leaf2, h*0.12, h*0.75, h*0.12,
+      Math.cos(a)*h*0.28, h*0.62, Math.sin(a)*h*0.28);
+    f.rotation.set(Math.cos(a)*0.7, 0, -Math.sin(a)*0.7);
+    g.add(f);
+  }
+  return g;
+}
+function fern(h){
+  var g = new THREE.Group();
+  for (var i=0;i<5;i++){
+    var a = i/5*TAU + rand(0,1);
+    var f = piece("cone", PAL.leaf, h*0.22, h, h*0.05, 0, h*0.45, 0);
+    f.rotation.set(rand(.3,.8)*Math.cos(a), a, rand(.3,.8)*Math.sin(a));
+    g.add(f);
+  }
+  return g;
+}
+(function plants(){
+  for (var i=0;i<46;i++){
+    var t = conifer(rand(9,20));
+    t.position.set(rand(-150,150), 0, rand(-150,40));
+    if (Math.abs(t.position.x) < 24 && t.position.z > -66) { t.position.x += t.position.x<0 ? -28 : 28; }
+    scene.add(t);
+  }
+  for (var j=0;j<26;j++){
+    var c = cycad(rand(3,6));
+    c.position.set(rand(-70,70), 0, rand(-90,26));
+    scene.add(c);
+  }
+  for (var k=0;k<130;k++){
+    var f = fern(rand(0.8,2.2));
+    f.position.set(rand(-90,90), 0, rand(-100,30));
+    scene.add(f);
+  }
+  for (var r=0;r<40;r++){
+    var s = rand(0.7,4);
+    var rk = piece("ico", PAL.rock, s, s*rand(.5,.9), s, rand(-110,110), s*0.22, rand(-120,34));
+    rk.rotation.set(rand(0,3), rand(0,3), rand(0,3));
+    scene.add(rk);
+  }
+})();
+
+/* volcano + plume */
+var plume = [];
+(function volcano(){
+  var g = new THREE.Group();
+  g.add(piece("cone", 0x4b3a34, 150, 78, 150, 0, 39, 0));
+  g.add(piece("cone", 0x33272a, 44, 16, 44, 0, 80, 0));
+  g.add(piece("cone", PAL.ember, 26, 5, 26, 0, 76, 0));
+  g.position.set(-70, 0, -300);
+  scene.add(g);
+  for (var i=0;i<7;i++){
+    var p = new THREE.Mesh(GEO.sph, new THREE.MeshLambertMaterial({
+      color:0x8d8079, transparent:true, opacity:0.36, fog:false, depthWrite:false
+    }));
+    var s = 26 + i*11;
+    p.scale.set(s,s,s);
+    p.position.set(-70 + i*7, 90 + i*22, -300);
+    plume.push(p); scene.add(p);
+  }
+})();
+
+/* pterosaurs, for the sky */
+var flyers = [];
+(function(){
+  for (var i=0;i<5;i++){
+    var g = new THREE.Group();
+    var body = piece("box", 0x3d3038, 0.5, 0.4, 2.2, 0,0,0);
+    g.add(body);
+    var lw = piece("box", 0x4a3a42, 4.4, 0.12, 1.1, -2.4, 0, 0);
+    var rw = piece("box", 0x4a3a42, 4.4, 0.12, 1.1,  2.4, 0, 0);
+    g.add(lw); g.add(rw);
+    g.userData = { lw:lw, rw:rw, r:rand(40,95), a:rand(0,TAU), y:rand(30,58), sp:rand(.05,.11), ph:rand(0,TAU) };
+    flyers.push(g); scene.add(g);
+  }
+})();
+
+/* ==========================================================
+   4. dinosaurs
+   ========================================================== */
+var animals = [];   /* { group, hit, data, tick } */
+
+function legPair(color, w,h, x,y,z){
+  var g = new THREE.Group();
+  var a = piece("cyl", color, w, h, w, -x, y, z);
+  var b = piece("cyl", color, w, h, w,  x, y, z);
+  g.add(a); g.add(b);
+  g.userData = { a:a, b:b };
+  return g;
+}
+
+/* --- Brachiosaurus: still, sways, lifts head to the canopy --- */
+function brachiosaurus(){
+  var g = new THREE.Group();
+  var C = 0x6f7a5a, C2 = 0x8a9169;
+  g.add(piece("sph", C, 7.5, 5.4, 12, 0, 6.4, 0));
+  g.add(piece("box", C2, 5.2, 3.4, 5.0, 0, 7.6, 1.4));
+  var neck = new THREE.Group();
+  for (var i=0;i<7;i++){
+    neck.add(piece("cyl", C, 1.9-i*0.14, 2.1, 1.9-i*0.14, 0, 1.05+i*1.85, -i*0.5));
+  }
+  var head = piece("box", C2, 1.5, 1.2, 2.6, 0, 14.0, -3.6);
+  neck.add(head);
+  neck.position.set(0, 7.4, -5.2);
+  g.add(neck);
+  var tail = new THREE.Group();
+  for (var t=0;t<6;t++){
+    tail.add(piece("cyl", C, 1.7-t*0.22, 2.4, 1.7-t*0.22, 0, -t*0.35, t*2.1));
+  }
+  tail.position.set(0, 6.0, 5.6); g.add(tail);
+  var fl = legPair(C, 1.6, 6.4, 2.6, 3.2, -3.0);
+  var bl = legPair(C, 1.9, 6.0, 2.9, 3.0,  3.4);
+  g.add(fl); g.add(bl);
+  return {
+    group:g,
+    tick:function(t){
+      neck.rotation.x = Math.sin(t*0.28)*0.30 - 0.12;
+      neck.rotation.z = Math.sin(t*0.19)*0.10;
+      tail.rotation.y = Math.sin(t*0.33)*0.18;
+      g.position.y = Math.sin(t*0.5)*0.06;
+    }
+  };
+}
+
+/* --- Triceratops: walks a slow arc --- */
+function triceratops(scale){
+  var g = new THREE.Group();
+  var C = 0x7d5f47, C2 = 0x96745a;
+  g.add(piece("sph", C, 2.6, 2.2, 4.4, 0, 1.9, 0));
+  var head = new THREE.Group();
+  head.add(piece("box", C2, 2.0, 1.5, 2.4, 0, 0, -1.0));
+  head.add(piece("cyl", C2, 3.6, 0.28, 3.6, 0, 0.35, 0.25));   /* frill */
+  head.add(piece("cone", 0xd8cbb0, 0.34, 1.7, 0.34, -0.62, 0.5, -2.1));
+  head.add(piece("cone", 0xd8cbb0, 0.34, 1.7, 0.34,  0.62, 0.5, -2.1));
+  head.add(piece("cone", 0xd8cbb0, 0.26, 0.8, 0.26, 0, -0.35, -2.35));
+  head.children[1].rotation.x = Math.PI/2;
+  head.children[2].rotation.x = -0.5;
+  head.children[3].rotation.x = -0.5;
+  head.position.set(0, 2.1, -2.6);
+  g.add(head);
+  var tail = piece("cone", C, 1.2, 3.0, 1.2, 0, 1.8, 2.9);
+  tail.rotation.x = -Math.PI/2 + 0.25; g.add(tail);
+  var fl = legPair(C, 0.72, 2.0, 1.15, 1.0, -1.4);
+  var bl = legPair(C, 0.82, 2.1, 1.25, 1.05, 1.5);
+  g.add(fl); g.add(bl);
+  g.scale.setScalar(scale||1);
+  var base = { x:0, z:0 };
+  return {
+    group:g,
+    tick:function(t){
+      var a = t*0.055;
+      g.position.x = base.x + Math.cos(a)*9;
+      g.position.z = base.z + Math.sin(a)*9;
+      g.rotation.y = Math.PI - a;
+      var s = Math.sin(t*2.4);
+      fl.userData.a.rotation.x =  s*0.42; fl.userData.b.rotation.x = -s*0.42;
+      bl.userData.a.rotation.x = -s*0.42; bl.userData.b.rotation.x =  s*0.42;
+      head.rotation.x = 0.12 + Math.sin(t*1.1)*0.09;
+      g.position.y = Math.abs(Math.sin(t*2.4))*0.09;
+    },
+    setBase:function(x,z){ base.x = x; base.z = z; }
+  };
+}
+
+/* --- Stegosaurus: plates, plods back and forth --- */
+function stegosaurus(){
+  var g = new THREE.Group();
+  var C = 0x556b4a, C2 = 0x6e8158, P = 0xb2593f;
+  g.add(piece("sph", C, 3.0, 2.6, 6.0, 0, 2.5, 0));
+  var head = piece("box", C2, 1.1, 1.0, 2.0, 0, 1.5, -3.6); g.add(head);
+  g.add(piece("cyl", C, 1.0, 1.6, 1.0, 0, 2.0, -2.8));
+  var tail = new THREE.Group();
+  for (var t=0;t<4;t++) tail.add(piece("cyl", C, 1.1-t*0.2, 1.5, 1.1-t*0.2, 0, 0, t*1.3));
+  tail.add(piece("cone", 0xd8cbb0, 0.22, 1.1, 0.22, -0.4, 0.2, 5.2));
+  tail.add(piece("cone", 0xd8cbb0, 0.22, 1.1, 0.22,  0.4, 0.2, 5.2));
+  tail.position.set(0, 2.6, 3.0); g.add(tail);
+  for (var i=0;i<8;i++){
+    var f = i/7;
+    var pl = piece("cone", P, 0.2, 1.5 - Math.abs(f-0.45)*1.6, 1.4 - Math.abs(f-0.45)*1.2,
+                   0, 4.1, -3.0 + i*0.95);
+    pl.rotation.z = (i%2 ? 0.14 : -0.14);
+    g.add(pl);
+  }
+  var fl = legPair(C, 0.6, 1.6, 1.3, 0.8, -2.0);
+  var bl = legPair(C, 0.85, 2.6, 1.5, 1.3, 2.0);
+  g.add(fl); g.add(bl);
+  var base = { x:0, z:0 };
+  return {
+    group:g,
+    tick:function(t){
+      g.position.z = base.z + Math.sin(t*0.11)*13;
+      g.rotation.y = Math.cos(t*0.11) > 0 ? Math.PI : 0;
+      var s = Math.sin(t*1.7);
+      fl.userData.a.rotation.x = s*0.3; fl.userData.b.rotation.x = -s*0.3;
+      bl.userData.a.rotation.x = -s*0.3; bl.userData.b.rotation.x = s*0.3;
+      head.rotation.x = 0.2 + Math.sin(t*0.6)*0.25;
+      tail.rotation.y = Math.sin(t*0.7)*0.2;
+      g.position.y = Math.abs(Math.sin(t*1.7))*0.06;
+    },
+    setBase:function(x,z){ base.x = x; base.z = z; g.position.x = x; }
+  };
+}
+
+/* --- Parasaurolophus: at the pond, dips to drink, honks --- */
+function parasaurolophus(){
+  var g = new THREE.Group();
+  var C = 0x8a6b7d, C2 = 0xa2839a, CR = 0xd98b52;
+  g.add(piece("sph", C, 2.2, 2.4, 4.6, 0, 2.7, 0));
+  var neck = new THREE.Group();
+  neck.add(piece("cyl", C, 1.0, 2.6, 1.0, 0, 1.2, -0.5));
+  var head = new THREE.Group();
+  head.add(piece("box", C2, 0.95, 1.0, 2.4, 0, 0, -0.9));
+  var crest = piece("cyl", CR, 0.34, 3.1, 0.34, 0, 0.9, 1.0);
+  crest.rotation.x = -1.15; head.add(crest);
+  head.position.set(0, 2.5, -0.9); neck.add(head);
+  neck.position.set(0, 3.4, -2.2); neck.rotation.x = 0.35;
+  g.add(neck);
+  var tail = new THREE.Group();
+  for (var t=0;t<5;t++) tail.add(piece("cyl", C, 1.2-t*0.2, 1.5, 1.2-t*0.2, 0, -t*0.2, t*1.35));
+  tail.position.set(0, 2.9, 2.4); g.add(tail);
+  var bl = legPair(C, 0.7, 3.0, 1.0, 1.5, 0.9);
+  var fl = legPair(C, 0.45, 1.9, 0.85, 1.0, -1.9);
+  g.add(bl); g.add(fl);
+  var honked = -99;
+  return {
+    group:g,
+    tick:function(t){
+      var dip = (Math.sin(t*0.22) + 1) / 2;
+      neck.rotation.x = 0.25 + dip*0.95;
+      tail.rotation.y = Math.sin(t*0.8)*0.22;
+      g.position.y = Math.sin(t*0.7)*0.05;
+      if (t - honked > rand(11,15)) { honked = t; SFX.honk(); }
+    }
+  };
+}
+
+/* --- Tyrannosaurus: watches, then comes to the far bank --- */
+function tyrannosaurus(){
+  var g = new THREE.Group();
+  var C = 0x6b4b3f, C2 = 0x86604f, T = 0xefe6d2;
+  var torso = piece("sph", C, 3.2, 3.0, 7.0, 0, 4.2, 0); g.add(torso);
+  var neck = piece("cyl", C, 1.5, 2.6, 1.5, 0, 5.6, -3.0); neck.rotation.x = 0.7; g.add(neck);
+  var head = new THREE.Group();
+  head.add(piece("box", C2, 1.7, 1.9, 4.2, 0, 0, -1.2));
+  head.add(piece("box", C2, 1.5, 0.7, 3.6, 0, -1.1, -1.5));   /* jaw */
+  for (var i=0;i<5;i++){
+    head.add(piece("cone", T, 0.16, 0.5, 0.16, -0.6, -0.85, -0.4 - i*0.62));
+    head.add(piece("cone", T, 0.16, 0.5, 0.16,  0.6, -0.85, -0.4 - i*0.62));
+  }
+  var jaw = head.children[1];
+  head.position.set(0, 6.6, -4.6); g.add(head);
+  var tail = new THREE.Group();
+  for (var t=0;t<6;t++) tail.add(piece("cyl", C, 1.6-t*0.24, 1.8, 1.6-t*0.24, 0, t*0.22, t*1.7));
+  tail.position.set(0, 4.4, 3.2); g.add(tail);
+  g.add(piece("cyl", C2, 0.3, 1.2, 0.3, -1.7, 4.4, -1.9));
+  g.add(piece("cyl", C2, 0.3, 1.2, 0.3,  1.7, 4.4, -1.9));
+  var legs = legPair(C, 1.1, 4.4, 1.7, 2.2, 0.3);
+  g.add(legs);
+  var st = { mode:"idle", t0:0, from:new THREE.Vector3(), to:new THREE.Vector3(), stepped:0 };
+  return {
+    group:g,
+    tick:function(t, dt){
+      var walk = 0;
+      if (st.mode === "charge"){
+        var k = clamp((t - st.t0)/4.2, 0, 1);
+        var e = k*k*(3-2*k);
+        g.position.lerpVectors(st.from, st.to, e);
+        walk = 1;
+        if (k >= 1) { st.mode = "watch"; st.t0 = t; SFX.roar(0.7); }
+      } else if (st.mode === "watch" && t - st.t0 > 9){
+        st.mode = "leave"; st.t0 = t;
+        st.from.copy(g.position);
+        st.to.set(g.position.x - 34, 0, g.position.z - 26);
+      } else if (st.mode === "leave"){
+        var k2 = clamp((t - st.t0)/16, 0, 1);
+        g.position.lerpVectors(st.from, st.to, k2);
+        walk = 0.6;
+        if (k2 >= 1) st.mode = "gone";
+      }
+      var sp = walk ? 2.2 : 0.5;
+      var s = Math.sin(t*sp);
+      legs.userData.a.rotation.x = s*0.5*(walk?1:0.25);
+      legs.userData.b.rotation.x = -s*0.5*(walk?1:0.25);
+      tail.rotation.y = s*0.22;
+      g.position.y = walk ? Math.abs(s)*0.22 : Math.sin(t*0.6)*0.05;
+      head.rotation.x = walk ? 0.1 : Math.sin(t*0.5)*0.12;
+      jaw.rotation.x = st.roaring ? -0.5 - Math.sin(t*9)*0.15 : -0.05;
+      if (walk && Math.floor(t*sp/Math.PI) !== st.stepped){
+        st.stepped = Math.floor(t*sp/Math.PI); SFX.thump();
+      }
+    },
+    charge:function(t, tx, tz){
+      if (st.mode !== "idle") return;
+      st.mode = "charge"; st.t0 = t;
+      st.from.copy(g.position);
+      st.to.set(tx, 0, tz);
+      g.lookAt(new THREE.Vector3(tx, g.position.y, tz + 34));
+      st.roaring = true;
+      SFX.roar(1);
+      setTimeout(function(){ st.roaring = false; }, 1800);
+    },
+    face:function(x,z){ g.rotation.y = Math.atan2(x - g.position.x, z - g.position.z) + Math.PI; }
+  };
+}
+
+/* --- register the cast --- */
+function addAnimal(builder, x, z, ry, data, hitR, hitY){
+  var a = builder;
+  a.group.position.set(x, 0, z);
+  a.group.rotation.y = ry;
+  if (a.setBase) a.setBase(x, z);
+  scene.add(a.group);
+  var hit = new THREE.Mesh(new THREE.SphereGeometry(hitR, 8, 6),
+    new THREE.MeshBasicMaterial({ visible:false }));
+  hit.position.y = hitY;
+  a.group.add(hit);
+  a.hit = hit; a.data = data; a.logged = false;
+  hit.userData.animal = a;
+  animals.push(a);
+  return a;
+}
+
+var brach = addAnimal(brachiosaurus(), -30, -30, 0.7, {
+  name:"Brachiosaurus", say:"BRACK-ee-oh-SORE-us", meaning:"arm lizard",
+  fact:"Front legs longer than the back ones, so it stood tilted uphill. It ate treetops all day and never chewed \u2014 it swallowed stones to grind food in its gut."
+}, 9, 7);
+
+var para = addAnimal(parasaurolophus(), -6, -37, 2.4, {
+  name:"Parasaurolophus", say:"PAIR-uh-SORE-oh-LOAF-us", meaning:"near crested lizard",
+  fact:"That tube on its head was hollow and connected to its nose. Blow air through a model of it and you get a low foghorn note \u2014 probably how the herd called out to each other."
+}, 5, 3.5);
+
+var steg = addAnimal(stegosaurus(), 30, -24, -1.2, {
+  name:"Stegosaurus", say:"STEG-oh-SORE-us", meaning:"roof lizard",
+  fact:"The plates weren't armour \u2014 too thin. They were full of blood vessels, so they likely dumped heat, flushed with colour, or both. The tail spikes were the real weapon."
+}, 6, 3.5);
+
+var tri = addAnimal(triceratops(1.15), 34, -58, 0, {
+  name:"Triceratops", say:"try-SERR-uh-tops", meaning:"three-horned face",
+  fact:"Its skull ran up to 8 feet long \u2014 about a third of the whole animal. Healed puncture marks on fossil frills show they duelled each other, horn to frill."
+}, 6, 3);
+
+var rex = addAnimal(tyrannosaurus(), 0, -118, Math.PI, {
+  name:"Tyrannosaurus rex", say:"tie-RAN-oh-SORE-us", meaning:"tyrant lizard king",
+  fact:"Bite force around 8,000 pounds \u2014 it crushed bone rather than slicing. It could not roar like a lion; closest living relatives suggest deep closed-mouth rumbles you'd feel in your chest."
+}, 8, 6);
+
+/* ==========================================================
+   5. trail stops
+   ========================================================== */
+var STOPS = [
+  { x:0,   z:6,   label:"Trailhead" },
+  { x:-16, z:-14, label:"Under the long necks" },
+  { x:-4,  z:-26, label:"Pond edge" },
+  { x:20,  z:-18, label:"Plate ridge" },
+  { x:26,  z:-44, label:"Horn meadow" },
+  { x:2,   z:-70, label:"River bank" }
+];
+var stops = [];
+(function(){
+  var ringGeo = new THREE.TorusGeometry(1.15, 0.09, 6, 22);
+  var glowGeo = new THREE.CircleGeometry(1.05, 20);
+  STOPS.forEach(function(s, i){
+    var g = new THREE.Group();
+    var ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color:PAL.ember, transparent:true, opacity:0.85 }));
+    ring.rotation.x = -Math.PI/2; ring.position.y = 0.1;
+    var glow = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({ color:0xffc79a, transparent:true, opacity:0.16 }));
+    glow.rotation.x = -Math.PI/2; glow.position.y = 0.08;
+    g.add(ring); g.add(glow);
+    g.position.set(s.x, 0, s.z);
+    scene.add(g);
+    var hit = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 3.4, 8),
+      new THREE.MeshBasicMaterial({ visible:false }));
+    hit.position.set(s.x, 1.2, s.z);
+    scene.add(hit);
+    hit.userData.stop = i;
+    stops.push({ i:i, group:g, ring:ring, glow:glow, hit:hit, pos:new THREE.Vector3(s.x, 1.65, s.z) });
+  });
+})();
+
+/* ==========================================================
+   6. HUD: reticle, journal card, counter  (all in 3D, both eyes)
+   ========================================================== */
+function textTexture(w, h, draw){
+  var c = D.createElement("canvas"); c.width = w; c.height = h;
+  draw(c.getContext("2d"), w, h);
+  var t = new THREE.CanvasTexture(c);
+  t.anisotropy = 2;
+  return t;
+}
+function wrap(g, text, x, y, maxW, lh){
+  var words = text.split(" "), line = "";
+  for (var i=0;i<words.length;i++){
+    var test = line + words[i] + " ";
+    if (g.measureText(test).width > maxW && line){
+      g.fillText(line.trim(), x, y); line = words[i] + " "; y += lh;
+    } else line = test;
+  }
+  g.fillText(line.trim(), x, y);
+  return y;
+}
+function ser(px, italic){ return (italic?"italic ":"") + px + 'px "Iowan Old Style", Georgia, serif'; }
+function mono(px){ return px + 'px ui-monospace, Menlo, monospace'; }
+
+/* reticle */
+var reticle = new THREE.Group();
+reticle.position.set(0, 0, -1.6);
+(function(){
+  var ring = new THREE.Mesh(new THREE.TorusGeometry(0.030, 0.0035, 6, 26),
+    new THREE.MeshBasicMaterial({ color:0xfff4e2, transparent:true, opacity:0.75, depthTest:false }));
+  ring.renderOrder = 900;
+  reticle.add(ring);
+  var fill = new THREE.Mesh(new THREE.CircleGeometry(0.026, 20),
+    new THREE.MeshBasicMaterial({ color:PAL.ember, transparent:true, opacity:0.95, depthTest:false }));
+  fill.renderOrder = 901; fill.scale.setScalar(0.001);
+  reticle.add(fill);
+  reticle.userData = { ring:ring, fill:fill };
+})();
+camera.add(reticle);
+
+/* counter strip */
+var counter = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.115),
+  new THREE.MeshBasicMaterial({ transparent:true, depthTest:false, opacity:0.92 }));
+counter.position.set(0, 0.50, -1.6);
+counter.renderOrder = 905;
+camera.add(counter);
+function drawCounter(){
+  var found = animals.filter(function(a){ return a.logged; }).length;
+  var tex = textTexture(768, 112, function(g,w,h){
+    g.clearRect(0,0,w,h);
+    g.fillStyle = "rgba(20,16,14,.55)";
+    g.fillRect(0, 22, w, 68);
+    g.fillStyle = "#ffc79a";
+    g.font = mono(30);
+    g.textAlign = "left"; g.textBaseline = "middle";
+    g.fillText("FIELD JOURNAL", 26, 56);
+    g.textAlign = "right";
+    g.fillStyle = "#e8dcc0";
+    g.font = ser(38);
+    g.fillText(found + " of " + animals.length + (found === animals.length ? "  \u2713" : ""), w - 26, 58);
+  });
+  if (counter.material.map) counter.material.map.dispose();
+  counter.material.map = tex;
+  counter.material.needsUpdate = true;
+}
+
+/* journal card */
+var card = new THREE.Mesh(new THREE.PlaneGeometry(1.44, 0.80),
+  new THREE.MeshBasicMaterial({ transparent:true, opacity:0, depthTest:false }));
+card.position.set(0, -0.30, -1.55);
+card.renderOrder = 910;
+card.visible = false;
+camera.add(card);
+var cardUntil = 0;
+
+function showCard(d, indexText){
+  var tex = textTexture(1024, 568, function(g,w,h){
+    /* parchment */
+    g.fillStyle = "#e8dcc0"; g.fillRect(0,0,w,h);
+    g.fillStyle = "rgba(146,118,74,.10)";
+    for (var i=0;i<220;i++){
+      g.fillRect(Math.random()*w, Math.random()*h, Math.random()*3+1, Math.random()*3+1);
+    }
+    g.strokeStyle = "#241c14"; g.lineWidth = 4;
+    g.strokeRect(16,16,w-32,h-32);
+    g.fillStyle = "#8a4a2c"; g.font = mono(22);
+    g.textAlign = "left"; g.textBaseline = "top";
+    g.fillText(indexText, 48, 46);
+    g.fillStyle = "#241c14"; g.font = ser(64);
+    g.fillText(d.name, 46, 84);
+    g.fillStyle = "#5b4a34"; g.font = ser(28, true);
+    g.fillText(d.say + "  \u00b7  \u201c" + d.meaning + "\u201d", 48, 168);
+    g.strokeStyle = "rgba(36,28,20,.35)"; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(48, 216); g.lineTo(w-48, 216); g.stroke();
+    g.fillStyle = "#2b2318"; g.font = ser(32);
+    wrap(g, d.fact, 48, 244, w-96, 42);
+  });
+  if (card.material.map) card.material.map.dispose();
+  card.material.map = tex;
+  card.material.needsUpdate = true;
+  card.visible = true;
+  card.material.opacity = 0;
+  cardUntil = clock.elapsedTime + 8.5;
+}
+
+/* floating name tag after logging */
+function nameTag(a){
+  var tex = textTexture(512, 128, function(g,w,h){
+    g.clearRect(0,0,w,h);
+    g.fillStyle = "rgba(20,16,14,.5)";
+    g.fillRect(0,30,w,68);
+    g.fillStyle = "#ffc79a"; g.font = mono(34);
+    g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText("\u2713  " + a.data.name.toUpperCase(), w/2, 64);
+  });
+  var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, depthTest:false }));
+  var r = a.hit.geometry.parameters.radius;
+  sp.scale.set(r*2.6, r*0.65, 1);
+  sp.position.set(0, a.hit.position.y + r*1.35, 0);
+  a.group.add(sp);
+}
+
+/* ==========================================================
+   7. audio (synthesised — nothing to download)
+   ========================================================== */
+var SFX = (function(){
+  var ac = null, on = true, noise = null, master = null;
+  function ready(){ return ac && on && ac.state === "running"; }
+  function env(node, peak, attack, decay, t0){
+    var g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(peak, t0 + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + attack + decay);
+    node.connect(g); g.connect(master);
+    return g;
+  }
+  return {
+    start:function(enabled){
+      on = !!enabled;
+      if (!on || ac) return;
+      var AC = W.AudioContext || W.webkitAudioContext;
+      if (!AC) return;
+      ac = new AC();
+      master = ac.createGain(); master.gain.value = 0.55; master.connect(ac.destination);
+      var len = ac.sampleRate * 2;
+      noise = ac.createBuffer(1, len, ac.sampleRate);
+      var d = noise.getChannelData(0);
+      for (var i=0;i<len;i++) d[i] = Math.random()*2 - 1;
+      /* wind bed */
+      var src = ac.createBufferSource(); src.buffer = noise; src.loop = true;
+      var lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 380;
+      var g = ac.createGain(); g.gain.value = 0.10;
+      var lfo = ac.createOscillator(); lfo.frequency.value = 0.07;
+      var lg = ac.createGain(); lg.gain.value = 0.05;
+      lfo.connect(lg); lg.connect(g.gain);
+      src.connect(lp); lp.connect(g); g.connect(master);
+      src.start(); lfo.start();
+      if (ac.state === "suspended") ac.resume();
+    },
+    toggle:function(){
+      on = !on;
+      if (master) master.gain.value = on ? 0.55 : 0;
+      if (on && !ac) this.start(true);
+      return on;
+    },
+    isOn:function(){ return on; },
+    roar:function(power){
+      if (!ready()) return;
+      var t0 = ac.currentTime, p = power || 1;
+      for (var k=0;k<2;k++){
+        var o = ac.createOscillator();
+        o.type = "sawtooth";
+        o.frequency.setValueAtTime(105 + k*17, t0);
+        o.frequency.exponentialRampToValueAtTime(42 + k*6, t0 + 1.5);
+        var f = ac.createBiquadFilter(); f.type = "lowpass";
+        f.frequency.setValueAtTime(900, t0);
+        f.frequency.exponentialRampToValueAtTime(240, t0 + 1.6);
+        o.connect(f);
+        env(f, 0.34*p, 0.12, 1.5, t0);
+        o.start(t0); o.stop(t0 + 1.8);
+      }
+      var n = ac.createBufferSource(); n.buffer = noise;
+      var nf = ac.createBiquadFilter(); nf.type = "bandpass"; nf.frequency.value = 300; nf.Q.value = 0.8;
+      n.connect(nf); env(nf, 0.16*p, 0.1, 1.3, t0);
+      n.start(t0); n.stop(t0 + 1.6);
+    },
+    honk:function(){
+      if (!ready()) return;
+      var t0 = ac.currentTime;
+      var o = ac.createOscillator(); o.type = "triangle";
+      o.frequency.setValueAtTime(232, t0);
+      o.frequency.linearRampToValueAtTime(168, t0 + 0.75);
+      env(o, 0.11, 0.14, 0.7, t0);
+      o.start(t0); o.stop(t0 + 1.0);
+    },
+    thump:function(){
+      if (!ready()) return;
+      var t0 = ac.currentTime;
+      var o = ac.createOscillator(); o.type = "sine";
+      o.frequency.setValueAtTime(72, t0);
+      o.frequency.exponentialRampToValueAtTime(28, t0 + 0.22);
+      env(o, 0.28, 0.005, 0.22, t0);
+      o.start(t0); o.stop(t0 + 0.3);
+    },
+    chirp:function(){
+      if (!ready()) return;
+      var t0 = ac.currentTime;
+      var o = ac.createOscillator(); o.type = "sine";
+      o.frequency.setValueAtTime(1500 + Math.random()*900, t0);
+      o.frequency.linearRampToValueAtTime(2500, t0 + 0.07);
+      env(o, 0.045, 0.01, 0.09, t0);
+      o.start(t0); o.stop(t0 + 0.14);
+    },
+    ping:function(){
+      if (!ready()) return;
+      var t0 = ac.currentTime;
+      [660, 990].forEach(function(f, i){
+        var o = ac.createOscillator(); o.type = "sine";
+        o.frequency.value = f;
+        env(o, 0.09, 0.01, 0.45, t0 + i*0.09);
+        o.start(t0 + i*0.09); o.stop(t0 + i*0.09 + 0.6);
+      });
+    }
+  };
+})();
+
+/* ==========================================================
+   8. head tracking + drag fallback
+   ========================================================== */
+var look = {
+  gyro:false, alpha:0, beta:0, gamma:0, orient:0,
+  yaw:0, pitch:0, yawOffset:0, calibrated:false
+};
+var qDev = new THREE.Quaternion();
+var qOff = new THREE.Quaternion();
+var UP = new THREE.Vector3(0,1,0);
+var eulerTmp = new THREE.Euler();
+
+var setQuatFromDevice = (function(){
+  var zee = new THREE.Vector3(0,0,1);
+  var e = new THREE.Euler();
+  var q0 = new THREE.Quaternion();
+  var q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
+  var deg = Math.PI/180;
+  return function(q, alpha, beta, gamma, orient){
+    e.set(beta*deg, alpha*deg, -gamma*deg, "YXZ");
+    q.setFromEuler(e);
+    q.multiply(q1);
+    q.multiply(q0.setFromAxisAngle(zee, -orient*deg));
+  };
+})();
+
+function screenAngle(){
+  if (typeof W.orientation === "number") return W.orientation;
+  if (W.screen && W.screen.orientation && typeof W.screen.orientation.angle === "number") return W.screen.orientation.angle;
+  return 0;
+}
+look.orient = screenAngle();
+
+function onOrientation(ev){
+  if (ev.alpha === null && ev.beta === null && ev.gamma === null) return;
+  look.gyro = true;
+  look.alpha = ev.alpha || 0;
+  look.beta  = ev.beta  || 0;
+  look.gamma = ev.gamma || 0;
+}
+
+function enableGyro(){
+  var DOE = W.DeviceOrientationEvent;
+  if (!DOE) return;
+  if (typeof DOE.requestPermission === "function"){
+    DOE.requestPermission().then(function(res){
+      if (res === "granted") W.addEventListener("deviceorientation", onOrientation, false);
+    }).catch(function(){});
+  } else {
+    W.addEventListener("deviceorientation", onOrientation, false);
+  }
+}
+
+function applyLook(){
+  if (look.gyro){
+    setQuatFromDevice(qDev, look.alpha, look.beta, look.gamma, look.orient);
+    if (!look.calibrated){
+      eulerTmp.setFromQuaternion(qDev, "YXZ");
+      look.yawOffset = -eulerTmp.y;
+      look.calibrated = true;
+    }
+    qOff.setFromAxisAngle(UP, look.yawOffset + look.yaw);
+    camera.quaternion.copy(qOff).multiply(qDev);
+  } else {
+    eulerTmp.set(look.pitch, look.yaw, 0, "YXZ");
+    camera.quaternion.setFromEuler(eulerTmp);
+  }
+}
+
+/* drag to look (fallback + fine tuning) */
+(function drag(){
+  var down = false, lx = 0, ly = 0;
+  function start(x,y){ down = true; lx = x; ly = y; }
+  function move(x,y){
+    if (!down) return;
+    var dx = (x - lx) / W.innerWidth, dy = (y - ly) / W.innerHeight;
+    lx = x; ly = y;
+    look.yaw -= dx * 3.4;
+    if (!look.gyro) look.pitch = clamp(look.pitch - dy * 2.6, -1.3, 1.3);
+  }
+  function end(){ down = false; }
+  var el = renderer.domElement;
+  el.addEventListener("touchstart", function(e){ start(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+  el.addEventListener("touchmove", function(e){ e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
+  el.addEventListener("touchend", end);
+  el.addEventListener("mousedown", function(e){ start(e.clientX, e.clientY); });
+  W.addEventListener("mousemove", function(e){ move(e.clientX, e.clientY); });
+  W.addEventListener("mouseup", end);
+})();
+
+/* ==========================================================
+   9. gaze targeting
+   ========================================================== */
+var ray = new THREE.Raycaster();
+var CENTER = new THREE.Vector2(0, 0);
+var gaze = { obj:null, held:0 };
+var DWELL_ANIMAL = 1.15, DWELL_STOP = 0.95;
+var glide = null;
+var targets = [];
+animals.forEach(function(a){ targets.push(a.hit); });
+stops.forEach(function(s){ targets.push(s.hit); });
+
+function logAnimal(a){
+  if (a.logged) return;
+  a.logged = true;
+  var n = animals.filter(function(x){ return x.logged; }).length;
+  showCard(a.data, "SPECIMEN " + n + " OF " + animals.length);
+  drawCounter();
+  nameTag(a);
+  SFX.ping();
+  if (a === rex && rex.charge) rex.charge(clock.elapsedTime, camera.position.x, -84);
+  if (n === animals.length){
+    setTimeout(function(){
+      showCard({
+        name:"Field notes complete",
+        say:"all five logged",
+        meaning:"good eyes",
+        fact:"Keep walking the trail as long as you like \u2014 the valley doesn't close. Reload the page to start a fresh survey."
+      }, "SUMMARY");
+    }, 9000);
+  }
+}
+
+function goToStop(i){
+  if (glide) return;
+  var s = stops[i];
+  if (camera.position.distanceTo(s.pos) < 1.2) return;
+  glide = { from:camera.position.clone(), to:s.pos.clone(), t:0, dur:1.15 };
+}
+
+function updateGaze(dt){
+  ray.setFromCamera(CENTER, camera);
+  ray.far = 150;
+  var hits = ray.intersectObjects(targets, false);
+  var hit = null;
+  for (var i=0;i<hits.length;i++){
+    var o = hits[i].object;
+    if (o.userData.animal && o.userData.animal.logged) continue;
+    if (typeof o.userData.stop === "number" && glide) continue;
+    hit = o; break;
+  }
+  if (hit !== gaze.obj){ gaze.obj = hit; gaze.held = 0; }
+  var need = 0;
+  if (hit){
+    need = hit.userData.animal ? DWELL_ANIMAL : DWELL_STOP;
+    gaze.held += dt;
+    if (gaze.held >= need){
+      if (hit.userData.animal) logAnimal(hit.userData.animal);
+      else goToStop(hit.userData.stop);
+      gaze.obj = null; gaze.held = 0;
+    }
+  } else {
+    gaze.held = Math.max(0, gaze.held - dt*2);
+  }
+  var p = need ? clamp(gaze.held/need, 0, 1) : 0;
+  reticle.userData.fill.scale.setScalar(Math.max(0.001, p));
+  reticle.userData.ring.material.opacity = hit ? 1 : 0.55;
+}
+
+/* ==========================================================
+   10. loop
+   ========================================================== */
+var clock = new THREE.Clock();
+var sizeVec = new THREE.Vector2();
+var running = false;
+var lastChirp = 0;
+
+function resize(){
+  var w = W.innerWidth, h = W.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+  $("turn").style.display = (running && h > w * 1.05) ? "flex" : "none";
+}
+W.addEventListener("resize", resize);
+W.addEventListener("orientationchange", function(){
+  look.orient = screenAngle();
+  setTimeout(resize, 350);
+});
+
+function animate(){
+  requestAnimationFrame(animate);
+  if (!running) return;
+  var dt = Math.min(clock.getDelta(), 0.05);
+  var t = clock.elapsedTime;
+
+  applyLook();
+
+  if (glide){
+    glide.t += dt;
+    var k = clamp(glide.t/glide.dur, 0, 1);
+    var e = k*k*(3-2*k);
+    camera.position.lerpVectors(glide.from, glide.to, e);
+    camera.position.y = 1.65 + Math.sin(k*Math.PI)*0.10;
+    if (k >= 1){ camera.position.y = 1.65; glide = null; }
+  }
+
+  animals.forEach(function(a){ a.tick(t, dt); });
+
+  stops.forEach(function(s){
+    var pulse = 0.6 + Math.sin(t*1.8 + s.i)*0.25;
+    s.ring.material.opacity = pulse;
+    s.group.scale.setScalar(1 + Math.sin(t*1.8 + s.i)*0.04);
+    var near = camera.position.distanceTo(s.pos) < 2.0;
+    s.group.visible = !near;
+    s.hit.visible = !near;
+  });
+
+  flyers.forEach(function(f){
+    var u = f.userData;
+    u.a += u.sp * dt;
+    f.position.set(Math.cos(u.a)*u.r - 30, u.y + Math.sin(u.a*2)*3, Math.sin(u.a)*u.r - 70);
+    f.rotation.y = -u.a + Math.PI/2;
+    var flap = Math.sin(t*3.1 + u.ph)*0.5;
+    u.lw.rotation.z = flap; u.rw.rotation.z = -flap;
+  });
+
+  plume.forEach(function(p, i){
+    p.position.y += dt * (1.4 + i*0.25);
+    p.rotation.y += dt*0.05;
+    if (p.position.y > 220 + i*20) p.position.y = 88;
+  });
+
+  if (t - lastChirp > 4 && Math.random() < 0.012){ lastChirp = t; SFX.chirp(); }
+
+  updateGaze(dt);
+
+  if (card.visible){
+    var target = clock.elapsedTime < cardUntil ? 0.97 : 0;
+    card.material.opacity += (target - card.material.opacity) * Math.min(1, dt*5);
+    if (card.material.opacity < 0.02 && target === 0) card.visible = false;
+  }
+
+  camera.updateMatrixWorld(true);
+  if (splitView){
+    renderer.getSize(sizeVec);
+    var size = sizeVec;
+    stereo.update(camera);
+    renderer.setScissorTest(true);
+    renderer.setScissor(0, 0, size.x/2, size.y);
+    renderer.setViewport(0, 0, size.x/2, size.y);
+    renderer.render(scene, stereo.cameraL);
+    renderer.setScissor(size.x/2, 0, size.x/2, size.y);
+    renderer.setViewport(size.x/2, 0, size.x/2, size.y);
+    renderer.render(scene, stereo.cameraR);
+    renderer.setScissorTest(false);
+  } else {
+    renderer.render(scene, camera);
+  }
+}
+animate();
+
+/* ==========================================================
+   11. chrome wiring
+   ========================================================== */
+var bar = $("bar"), dimTimer = null;
+function nudgeBar(){
+  bar.classList.remove("dim");
+  if (dimTimer) clearTimeout(dimTimer);
+  dimTimer = setTimeout(function(){ bar.classList.add("dim"); }, 5000);
+}
+D.addEventListener("touchstart", function(){ if (running) nudgeBar(); }, {passive:true});
+
+$("b-split").addEventListener("click", function(e){
+  e.stopPropagation();
+  splitView = !splitView;
+  this.textContent = splitView ? "Split view" : "Single view";
+  nudgeBar();
+});
+$("b-center").addEventListener("click", function(e){
+  e.stopPropagation();
+  look.calibrated = false; look.yaw = 0; look.pitch = 0;
+  nudgeBar();
+});
+$("b-sound").addEventListener("click", function(e){
+  e.stopPropagation();
+  this.textContent = SFX.toggle() ? "Sound" : "Muted";
+  nudgeBar();
+});
+
+$("go").addEventListener("click", function(){
+  splitView = $("o-split").checked;
+  $("b-split").textContent = splitView ? "Split view" : "Single view";
+  SFX.start($("o-sound").checked);
+  $("b-sound").textContent = SFX.isOn() ? "Sound" : "Muted";
+  enableGyro();
+  $("gate").style.display = "none";
+  bar.style.display = "flex";
+  nudgeBar();
+  drawCounter();
+  running = true;
+  clock.start();
+  resize();
+  setTimeout(function(){
+    showCard({
+      name:"Trailhead",
+      say:"start here",
+      meaning:"look for the rings",
+      fact:"Rest the dot on a glowing ring to move. Rest it on an animal to log it. Turn all the way around \u2014 something is always behind you."
+    }, "BRIEFING");
+  }, 700);
+});
+})();
+</script>
+</body>
+</html>
